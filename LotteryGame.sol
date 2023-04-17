@@ -1,28 +1,36 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.18;
+pragma solidity ^0.8.0;
 
 contract LotteryGame {
     address payable[] public players;
-    address gameManager;
+    address public gameManager;
     uint private minimumPlayers = 3;
     uint public balance;
 
     constructor() {
-        gameManager = msg.sender;
+        gameManager = payable(msg.sender);
     }
 
     modifier minEther() {
         require(
             msg.value >= 0.1 ether,
-            "Please send 0.1 Ether to participate in the game!"
+            "Please send at least 0.1 Ether to participate in the game!"
         );
         _;
     }
 
     modifier minPlayers() {
         require(
-            players.length >= 3,
-            "Minimun Three players are required to participate!"
+            players.length >= minimumPlayers,
+            "Minimum three players are required to participate!"
+        );
+        _;
+    }
+
+    modifier onlyManager() {
+        require(
+            msg.sender == gameManager,
+            "Only the manager can pick the winner!"
         );
         _;
     }
@@ -32,7 +40,7 @@ contract LotteryGame {
         balance += msg.value;
     }
 
-    function randomNumGenerater() public view returns (uint) {
+    function randomNumGenerator() public view returns (uint) {
         return
             uint(
                 keccak256(
@@ -45,8 +53,8 @@ contract LotteryGame {
             ) % players.length;
     }
 
-    function pickWinner() public minPlayers returns (address) {
-        uint winnerIndex = randomNumGenerater();
+    function pickWinner() public onlyManager minPlayers returns (address) {
+        uint winnerIndex = randomNumGenerator();
         address payable winner = players[winnerIndex];
         winner.transfer(balance);
         balance = 0;
